@@ -1,9 +1,44 @@
+@use '@angular/material' as mat;
+
+$mediaflow-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$azure-palette,
+    tertiary: mat.$orange-palette,
+  ),
+  typography: (
+    plain-family: (Roboto, sans-serif),
+    brand-family: ("Source Serif 4", Georgia, serif),
+  ),
+  density: (
+    scale: 0,
+  ),
+));
+
+html {
+  @include mat.core();
+  @include mat.all-component-themes($mediaflow-theme);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html,
 body {
-  font-family: sans-serif;
+  height: 100%;
+}
+
+body {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  color: #0f2744;
+  background: #e8eef2;
+}
+
+button.mat-mdc-outlined-button,
+a.mat-mdc-outlined-button {
+  --mdc-outlined-button-outline-color: rgba(248, 250, 252, 0.45);
+  --mdc-outlined-button-label-text-color: #f8fafc;
 }

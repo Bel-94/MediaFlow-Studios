@@ -31,13 +31,23 @@ scripts/            # Deploy, seed, SSM sync, developer setup
 .github/            # CI + deploy-dev + deploy-prod + Dependabot
 ```
 
+## Demo
+
+See [docs/demo.md](docs/demo.md) for the 5-minute walkthrough (sign-in → upload → workspace → versions → analytics).
+
+Deploy the SPA:
+
+```powershell
+.\scripts\deploy-frontend.ps1 -Env dev
+```
+
 ## Getting started
 
 ### Prerequisites
 
 - Node.js 18+
 - Python 3.10+ (for pre-commit)
-- Terraform 1.5+
+- Terraform 1.10+
 - AWS CLI configured (for deploy)
 - Optional locally: [TFLint](https://github.com/terraform-linters/tflint), [terraform-docs](https://terraform-docs.io), [tfsec](https://github.com/aquasecurity/tfsec), [Checkov](https://www.checkov.io/)
 

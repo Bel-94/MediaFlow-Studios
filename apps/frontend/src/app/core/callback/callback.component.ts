@@ -1,11 +1,27 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../auth.service';
 
 @Component({
   selector: 'app-callback',
   standalone: true,
-  template: `<p>Signing you in...</p>`,
+  imports: [MatProgressSpinnerModule],
+  template: `
+    <div class="wrap">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Signing you in…</p>
+    </div>
+  `,
+  styles: [`
+    .wrap {
+      min-height: 40vh;
+      display: grid;
+      place-items: center;
+      gap: 1rem;
+      color: #475569;
+    }
+  `],
 })
 export class CallbackComponent implements OnInit {
   constructor(
@@ -20,7 +36,7 @@ export class CallbackComponent implements OnInit {
 
     if (error || !code) {
       console.error('Cognito callback error:', error);
-      await this.router.navigate(['/login']);
+      await this.auth.login();
       return;
     }
 
@@ -29,7 +45,7 @@ export class CallbackComponent implements OnInit {
       await this.router.navigate(['/workspace']);
     } catch (err) {
       console.error('Token exchange failed:', err);
-      await this.router.navigate(['/login']);
+      await this.auth.login();
     }
   }
 }

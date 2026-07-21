@@ -175,7 +175,9 @@ resource "aws_api_gateway_resource" "analytics_summary" {
 }
 
 locals {
-  cors_origin = length(var.allowed_origins) > 0 ? var.allowed_origins[0] : "*"
+  # Wildcard so both localhost and CloudFront demos pass OPTIONS preflight.
+  # Lambda responses already emit Access-Control-Allow-Origin: *.
+  cors_origin = "*"
   cors_resources = {
     files             = aws_api_gateway_resource.files.id
     files_upload      = aws_api_gateway_resource.files_upload.id
@@ -267,6 +269,7 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_resource.analytics_summary,
       aws_api_gateway_method.cors,
       aws_api_gateway_integration.cors,
+      aws_api_gateway_integration_response.cors,
     ]))
   }
 

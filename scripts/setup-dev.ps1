@@ -1,12 +1,12 @@
-# MediaFlow Studios — Developer setup (Phase A tooling)
+# MediaFlow Studios - Developer setup (Phase A tooling)
 # Run from repo root (s3-files-workspace):
-#   pwsh ./scripts/setup-dev.ps1
+#   .\scripts\setup-dev.ps1
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
-Write-Host "==> MediaFlow Studios — Phase A developer setup" -ForegroundColor Cyan
+Write-Host "==> MediaFlow Studios - Phase A developer setup" -ForegroundColor Cyan
 
 function Assert-Command($Name) {
   if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
@@ -34,14 +34,14 @@ Write-Host "`n[3/5] Installing TFLint AWS plugin (if tflint present)..."
 if (Get-Command tflint -ErrorAction SilentlyContinue) {
   tflint --init --config "$Root\.tflint.hcl"
 } else {
-  Write-Host "  tflint not found — install from https://github.com/terraform-linters/tflint (optional locally; CI runs it)" -ForegroundColor Yellow
+  Write-Host "  tflint not found - install from https://github.com/terraform-linters/tflint (optional locally; CI runs it)" -ForegroundColor Yellow
 }
 
 Write-Host "`n[4/5] Installing terraform-docs (if present)..."
 if (Get-Command terraform-docs -ErrorAction SilentlyContinue) {
   Write-Host "  terraform-docs OK"
 } else {
-  Write-Host "  terraform-docs not found — install from https://terraform-docs.io (optional locally; CI + pre-commit run it)" -ForegroundColor Yellow
+  Write-Host "  terraform-docs not found - install from https://terraform-docs.io (optional locally; CI + pre-commit run it)" -ForegroundColor Yellow
 }
 
 Write-Host "`n[5/5] Installing app dependencies..."

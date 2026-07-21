@@ -1,4 +1,4 @@
-export const environment = {
+﻿export const environment = {
   production: true,
   apiUrl: 'https://cjlne13c3l.execute-api.us-east-1.amazonaws.com/dev',
   cognitoUserPoolId: 'us-east-1_X4lcFivSg',

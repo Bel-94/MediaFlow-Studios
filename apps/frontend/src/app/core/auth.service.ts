@@ -12,11 +12,11 @@ const STORAGE = {
 };
 
 interface TokenResponse {
-  id_token:      string;
-  access_token:  string;
-  refresh_token: string;
-  expires_in:    number;
-  token_type:    string;
+  id_token: string;
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  token_type: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -126,17 +126,27 @@ export class AuthService {
 
   logout(): void {
     Object.values(STORAGE).forEach(key => localStorage.removeItem(key));
+    sessionStorage.removeItem(STORAGE.CODE_VERIFIER);
     this.loggedIn.next(false);
+    const logoutUri = encodeURIComponent(this.appOrigin());
     window.location.href =
-      `${environment.cognitoDomain}/logout?client_id=${environment.cognitoClientId}&logout_uri=${environment.redirectUri}`;
+      `${environment.cognitoDomain}/logout?client_id=${environment.cognitoClientId}&logout_uri=${logoutUri}`;
+  }
+
+  /** Cognito logout_urls are site roots (no /callback). */
+  private appOrigin(): string {
+    return environment.redirectUri.replace(/\/callback\/?$/, '') || window.location.origin;
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────────
 
   private storeTokens(tokens: TokenResponse): void {
-    localStorage.setItem(STORAGE.ID_TOKEN,      tokens.id_token);
-    localStorage.setItem(STORAGE.ACCESS_TOKEN,  tokens.access_token);
-    localStorage.setItem(STORAGE.REFRESH_TOKEN, tokens.refresh_token);
-    localStorage.setItem(STORAGE.EXPIRES_AT,    String(Date.now() + tokens.expires_in * 1000));
+    localStorage.setItem(STORAGE.ID_TOKEN, tokens.id_token);
+    localStorage.setItem(STORAGE.ACCESS_TOKEN, tokens.access_token);
+    // Refresh grant often omits refresh_token — keep the existing one.
+    if (tokens.refresh_token) {
+      localStorage.setItem(STORAGE.REFRESH_TOKEN, tokens.refresh_token);
+    }
+    localStorage.setItem(STORAGE.EXPIRES_AT, String(Date.now() + tokens.expires_in * 1000));
   }
 }
