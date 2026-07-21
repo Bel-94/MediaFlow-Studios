@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/functions/s3-event-processor",
+    "rootDir": "../.."
+  },
+  "include": ["./**/*.ts", "../../shared/**/*.ts"]
+}

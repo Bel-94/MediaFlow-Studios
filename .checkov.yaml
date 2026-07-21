@@ -1,0 +1,15 @@
+# Checkov configuration — MediaFlow Studios DAM
+# Docs: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+
+compact: true
+framework:
+  - terraform
+
+quiet: false
+download-external-modules: false
+
+# Skip only documented, intentional exceptions. Prefer remediating in Phase B.
+skip-check: []
+
+# Soft-fail is controlled by CI / pre-commit args during Phase A.
+# After Phase B remediations, CI will hard-fail on HIGH/CRITICAL findings.

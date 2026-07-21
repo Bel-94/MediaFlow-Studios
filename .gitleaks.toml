@@ -1,0 +1,17 @@
+# Gitleaks — prevent secrets from entering the repository
+# https://github.com/gitleaks/gitleaks
+
+title = "MediaFlow Studios gitleaks"
+
+[extend]
+useDefault = true
+
+# Allowlist: demo placeholders and public Cognito client IDs are not secrets.
+# Cognito app client IDs are public (embedded in SPAs); never allowlist passwords/keys.
+[[allowlists]]
+description = "Frontend public Cognito client ID and demo placeholders"
+paths = [
+  '''apps/frontend/src/environments/.*''',
+  '''infrastructure/environments/.*/terraform\.tfvars''',
+  '''docs/.*''',
+]

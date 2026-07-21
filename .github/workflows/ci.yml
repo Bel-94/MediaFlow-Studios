@@ -1,0 +1,141 @@
+# Phase A — PR quality gate (no AWS deploy)
+# Fails the build on format/validate/secret issues.
+# Checkov/tfsec report findings; soft-fail until Phase B remediations land.
+
+name: CI — Quality & Security
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_IN_AUTOMATION: "true"
+  AWS_REGION: us-east-1
+
+jobs:
+  gitleaks:
+    name: Secret detection (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  terraform:
+    name: Terraform fmt / validate / lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+          terraform_wrapper: false
+
+      - name: Terraform fmt (check)
+        id: fmt
+        run: terraform fmt -check -recursive -diff
+        continue-on-error: false
+
+      - name: Terraform init (no backend)
+        working-directory: infrastructure/environments/dev
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform validate
+        working-directory: infrastructure/environments/dev
+        run: terraform validate -no-color
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.0
+
+      - name: TFLint init
+        run: tflint --init --config "${{ github.workspace }}/.tflint.hcl"
+        working-directory: ${{ github.workspace }}
+
+      - name: TFLint
+        run: |
+          tflint --config "${{ github.workspace }}/.tflint.hcl" --recursive \
+            --chdir="${{ github.workspace }}/infrastructure"
+
+  tfsec:
+    name: Terraform security (tfsec)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infrastructure
+          soft_fail: true
+          additional_args: --config-file ${{ github.workspace }}/.tfsec.yml
+        # Phase B: set soft_fail: false after remediating HIGH/CRITICAL findings
+
+  checkov:
+    name: Terraform security (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infrastructure
+          config_file: .checkov.yaml
+          framework: terraform
+          soft_fail: true
+          output_format: cli
+          download_external_modules: false
+        # Phase B: set soft_fail: false after remediating findings
+
+  terraform-docs:
+    name: terraform-docs drift check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate docs and fail if outdated
+        uses: terraform-docs/gh-actions@v1.3.0
+        with:
+          working-dir: |
+            infrastructure/modules/api
+            infrastructure/modules/auth
+            infrastructure/modules/compute
+            infrastructure/modules/events
+            infrastructure/modules/frontend
+            infrastructure/modules/observability
+            infrastructure/modules/storage
+          output-file: README.md
+          output-method: inject
+          config-file: .terraform-docs.yml
+          fail-on-diff: false
+          # Set to true once terraform-docs is run locally and READMEs are committed
