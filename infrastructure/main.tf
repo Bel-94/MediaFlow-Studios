@@ -52,7 +52,6 @@ module "events" {
   source                  = "./modules/events"
   project_name            = var.project_name
   environment             = var.environment
-  bucket_arn              = module.storage.bucket_arn
   s3_event_processor_arn  = module.compute.s3_event_processor_arn
   s3_event_processor_name = module.compute.s3_event_processor_name
 }
@@ -80,7 +79,6 @@ module "observability" {
   environment    = var.environment
   aws_region     = var.aws_region
   function_names = module.compute.function_names
-  dlq_arn        = module.events.dlq_arn
   dlq_name       = module.events.dlq_name
   alert_email    = var.alert_email
   api_name       = "${var.project_name}-${var.environment}"

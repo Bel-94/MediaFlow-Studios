@@ -8,8 +8,8 @@ on:
     branches: [main, develop]
   push:
     branches: [main, develop]
-  workflow_dispatch:
-  workflow_call:
+  # Remove workflow_call — deploy workflows use workflow_run instead of reusable CI
+# to avoid GitHub Actions permission conflicts when calling ci.yml.
 
 permissions:
   contents: read

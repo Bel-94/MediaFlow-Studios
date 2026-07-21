@@ -1,7 +1,9 @@
-# Phase B — Production deploy with manual approval
-# GitHub Environment "production" should require reviewers.
-# Required secrets on that environment:
+# Production deploy with manual confirmation + GitHub Environment approval.
+# Required secrets on environment "production":
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#
+# Quality gates run on every push via "CI — Quality & Security"; this workflow
+# does not re-call CI as a reusable workflow (permission conflicts).
 
 name: Deploy — Production
 
@@ -38,14 +40,9 @@ jobs:
             exit 1
           fi
 
-  quality-gate:
-    name: Reuse CI checks
-    needs: confirm
-    uses: ./.github/workflows/ci.yml
-
   terraform-apply:
     name: Terraform apply (prod)
-    needs: quality-gate
+    needs: confirm
     runs-on: ubuntu-latest
     environment: production
     defaults:
@@ -120,9 +117,15 @@ jobs:
               --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
               --zip-file "fileb:///tmp/backend.zip" \
               --region "${AWS_REGION}"
+            aws lambda wait function-updated \
+              --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
+              --region "${AWS_REGION}"
             aws lambda update-function-configuration \
               --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
               --handler "functions/${fn}/index.handler" \
               --region "${AWS_REGION}" >/dev/null
+            aws lambda wait function-updated \
+              --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
+              --region "${AWS_REGION}"
             echo "Deployed ${PROJECT_NAME}-${fn}-${ENVIRONMENT}"
           done

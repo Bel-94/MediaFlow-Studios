@@ -1,12 +1,16 @@
-# Phase B — Deploy to development after successful CI on main
-# Requires GitHub Environment "development" with secrets:
+# Deploy to development after CI succeeds on main.
+# Requires GitHub Environment "development" with:
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-# (Prefer OIDC later — see docs/adr/ADR-003-parameter-store.md)
+#
+# CI runs separately on push; this workflow waits for it via workflow_run
+# (avoids reusable-workflow permission conflicts).
 
 name: Deploy — Development
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI — Quality & Security"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -16,7 +20,7 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write
+  actions: read
 
 env:
   AWS_REGION: us-east-1
@@ -25,13 +29,11 @@ env:
   ENVIRONMENT: dev
 
 jobs:
-  quality-gate:
-    name: Reuse CI checks
-    uses: ./.github/workflows/ci.yml
-
   terraform-apply:
     name: Terraform apply (dev)
-    needs: quality-gate
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     environment: development
     defaults:
@@ -40,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -71,6 +75,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -106,10 +112,15 @@ jobs:
               --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
               --zip-file "fileb:///tmp/backend.zip" \
               --region "${AWS_REGION}"
-            # Ensure handler matches compiled path after Terraform placeholder
+            aws lambda wait function-updated \
+              --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
+              --region "${AWS_REGION}"
             aws lambda update-function-configuration \
               --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
               --handler "functions/${fn}/index.handler" \
               --region "${AWS_REGION}" >/dev/null
+            aws lambda wait function-updated \
+              --function-name "${PROJECT_NAME}-${fn}-${ENVIRONMENT}" \
+              --region "${AWS_REGION}"
             echo "Deployed ${PROJECT_NAME}-${fn}-${ENVIRONMENT}"
           done

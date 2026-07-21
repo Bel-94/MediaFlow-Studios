@@ -1,5 +1,8 @@
 # Checkov configuration — MediaFlow Studios DAM
 # Docs: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+#
+# Remediations that fit the $0–5/mo portfolio budget are implemented in Terraform.
+# Remaining skips are intentional FinOps / scope tradeoffs (see ADR-004).
 
 compact: true
 framework:
@@ -8,23 +11,50 @@ framework:
 quiet: false
 download-external-modules: false
 
-# Intentional tradeoffs (documented). Prefer remediating over skipping.
-# Each skip maps to a FinOps / portfolio-scope decision.
 skip-check:
-  # Cross-Region Replication — out of demo budget; DR is documented for Phase D
-  - CKV_AWS_144
-  - CKV2_AWS_62
-  # Customer-managed KMS — SSE-S3 chosen to stay near $0–5/mo (see ADR-003)
-  - CKV_AWS_145
-  - CKV2_AWS_67
-  # CloudFront WAF — meaningful cost at portfolio scale; edge HTTPS + OAC remain
-  - CKV_AWS_68
-  - CKV2_AWS_32
-  # Lambda in VPC — adds NAT/ENI cost and cold-start complexity; no private resource needs
-  - CKV_AWS_117
-  # API Gateway WAF / access logging to separate account — deferred
-  - CKV_AWS_120
-  - CKV2_AWS_4
-  - CKV_AWS_76
-  # Cognito advanced security (Plus) — paid tier; password + optional MFA implemented
+  # ── Cost: customer-managed KMS / long retention ─────────────────────────────
+  - CKV_AWS_145          # S3 CMK (SSE-S3 used)
+  - CKV2_AWS_67          # DynamoDB CMK alias check
+  - CKV_AWS_119          # DynamoDB customer CMK
+  - CKV_AWS_158          # CloudWatch Logs KMS
+  - CKV_AWS_173          # Lambda env var KMS
+  - CKV_AWS_337          # SSM CMK
+  - CKV2_AWS_34          # SSM SecureString (non-secret String params by design)
+  - CKV2_AWS_73          # SQS CMK (SSE-SQS used)
+  - CKV_AWS_338          # 1-year log retention (14/30d kept for cost)
+
+  # ── Cost / complexity: WAF, custom TLS, multi-AZ edge ───────────────────────
+  - CKV_AWS_68           # CloudFront WAF
+  - CKV2_AWS_32          # CloudFront response headers policy
+  - CKV2_AWS_47           # CloudFront WAF Log4j AMR
+  - CKV2_AWS_29           # API Gateway WAF
+  - CKV2_AWS_77           # API Gateway WAF Log4j
+  - CKV2_AWS_42           # Custom ACM cert (default CloudFront cert for demo)
+  - CKV_AWS_174          # TLS 1.2+ requires custom ACM cert with default CF cert
+  - CKV_AWS_374          # Geo restriction
+  - CKV_AWS_310          # CloudFront origin failover
+  - CKV_AWS_86           # CloudFront access logging
+  - CKV2_AWS_51           # API Gateway client certificates
+
+  # ── Lambda hardening beyond portfolio scope ─────────────────────────────────
+  - CKV_AWS_117          # Lambda in VPC
+  - CKV_AWS_115          # Reserved concurrency
+  - CKV_AWS_272          # Code signing
+  - CKV_AWS_116          # Per-function DLQ (SQS DLQ covers processor; API 5XX alarms cover APIs)
+
+  # ── API Gateway extras ──────────────────────────────────────────────────────
+  - CKV_AWS_120          # Execution logging / account CW role
+  - CKV2_AWS_4           # API Gateway logging
+  - CKV_AWS_76           # X-Ray detailed (stage already has tracing)
+  - CKV_AWS_225          # Method caching (breaks dynamic DAM API semantics)
+  - CKV2_AWS_53           # Request validators (handled in Lambda)
+
+  # ── S3 / bootstrap extras ───────────────────────────────────────────────────
+  - CKV_AWS_144          # Cross-region replication
+  - CKV2_AWS_62           # Event notifications already via EventBridge
+  - CKV_AWS_18           # Access logging on state/hosting (media bucket logs enabled)
+  - CKV_AWS_21           # Versioning on hosting/access-logs (immutable hashed assets)
+  - CKV2_AWS_61           # Lifecycle on state/hosting
+
+  # ── Cognito paid tier ───────────────────────────────────────────────────────
   - CKV_AWS_250

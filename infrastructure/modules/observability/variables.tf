@@ -18,11 +18,6 @@ variable "function_names" {
   description = "Map of logical function key to Lambda function name"
 }
 
-variable "dlq_arn" {
-  type        = string
-  description = "Dead-letter queue ARN"
-}
-
 variable "dlq_name" {
   type        = string
   description = "Dead-letter queue name for metrics dimensions"

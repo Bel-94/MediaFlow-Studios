@@ -22,7 +22,6 @@ No requirements.
 | api_name | API Gateway REST API name | `string` | n/a | yes |
 | api_stage | API Gateway stage name | `string` | n/a | yes |
 | aws_region | AWS region for dashboard widgets | `string` | n/a | yes |
-| dlq_arn | Dead-letter queue ARN | `string` | n/a | yes |
 | dlq_name | Dead-letter queue name for metrics dimensions | `string` | n/a | yes |
 | environment | Deployment environment | `string` | n/a | yes |
 | function_names | Map of logical function key to Lambda function name | `map(string)` | n/a | yes |
