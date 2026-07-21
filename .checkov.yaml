@@ -8,8 +8,23 @@ framework:
 quiet: false
 download-external-modules: false
 
-# Skip only documented, intentional exceptions. Prefer remediating in Phase B.
-skip-check: []
-
-# Soft-fail is controlled by CI / pre-commit args during Phase A.
-# After Phase B remediations, CI will hard-fail on HIGH/CRITICAL findings.
+# Intentional tradeoffs (documented). Prefer remediating over skipping.
+# Each skip maps to a FinOps / portfolio-scope decision.
+skip-check:
+  # Cross-Region Replication — out of demo budget; DR is documented for Phase D
+  - CKV_AWS_144
+  - CKV2_AWS_62
+  # Customer-managed KMS — SSE-S3 chosen to stay near $0–5/mo (see ADR-003)
+  - CKV_AWS_145
+  - CKV2_AWS_67
+  # CloudFront WAF — meaningful cost at portfolio scale; edge HTTPS + OAC remain
+  - CKV_AWS_68
+  - CKV2_AWS_32
+  # Lambda in VPC — adds NAT/ENI cost and cold-start complexity; no private resource needs
+  - CKV_AWS_117
+  # API Gateway WAF / access logging to separate account — deferred
+  - CKV_AWS_120
+  - CKV2_AWS_4
+  - CKV_AWS_76
+  # Cognito advanced security (Plus) — paid tier; password + optional MFA implemented
+  - CKV_AWS_250

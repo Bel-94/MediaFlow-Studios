@@ -11,6 +11,22 @@ resource "aws_s3_bucket_public_access_block" "hosting" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_ownership_controls" "hosting" {
+  bucket = aws_s3_bucket.hosting.id
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "hosting" {
+  bucket = aws_s3_bucket.hosting.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 # ── CloudFront Origin Access Control ──────────────────────────────────────────
 resource "aws_cloudfront_origin_access_control" "main" {
   name                              = "${var.project_name}-oac-${var.environment}"

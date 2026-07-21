@@ -2,7 +2,9 @@
 
 Secure, scalable, serverless DAM on AWS for a fictional media production company. Employees upload, organize, version, and retrieve media assets without managing file servers.
 
-> Portfolio / AWS Community Builders project demonstrating production-grade cloud architecture, DevSecOps, and Well-Architected practices.
+> Portfolio project demonstrating production-grade cloud architecture, DevSecOps, and Well-Architected practices.
+
+**Repo:** [Bel-94/MediaFlow-Studios](https://github.com/Bel-94/MediaFlow-Studios)
 
 ## Stack
 
@@ -11,10 +13,11 @@ Secure, scalable, serverless DAM on AWS for a fictional media production company
 | Frontend | Angular (TypeScript) |
 | Backend | AWS Lambda (TypeScript, AWS SDK v3) |
 | Infrastructure | Terraform |
-| CI/CD | GitHub Actions |
-| Auth | Amazon Cognito (PKCE) |
-| Storage | Amazon S3 (versioned) + DynamoDB |
-| Events | EventBridge + SQS (+ DLQ) |
+| CI/CD | GitHub Actions (CI + env promotion) |
+| Auth | Amazon Cognito (PKCE, optional MFA) |
+| Storage | Amazon S3 (versioned, encrypted) + DynamoDB |
+| Config | SSM Parameter Store |
+| Events | EventBridge + SQS (+ DLQ, SSE) |
 | Observability | CloudWatch logs, metrics, alarms, dashboards |
 
 ## Project structure
@@ -23,9 +26,9 @@ Secure, scalable, serverless DAM on AWS for a fictional media production company
 apps/frontend       # Angular SPA
 apps/backend        # Lambda functions (TypeScript)
 infrastructure/     # Terraform (modules + environments)
-docs/               # Architecture, ADRs, runbooks (growing)
-scripts/            # Deploy, seed, and developer setup
-.github/            # CI workflows + Dependabot
+docs/               # Architecture, ADRs, release management
+scripts/            # Deploy, seed, SSM sync, developer setup
+.github/            # CI + deploy-dev + deploy-prod + Dependabot
 ```
 
 ## Getting started
@@ -38,13 +41,11 @@ scripts/            # Deploy, seed, and developer setup
 - AWS CLI configured (for deploy)
 - Optional locally: [TFLint](https://github.com/terraform-linters/tflint), [terraform-docs](https://terraform-docs.io), [tfsec](https://github.com/aquasecurity/tfsec), [Checkov](https://www.checkov.io/)
 
-### One-time developer setup (Phase A tooling)
+### One-time developer setup
 
 ```powershell
-pwsh ./scripts/setup-dev.ps1
+.\scripts\setup-dev.ps1
 ```
-
-This installs pre-commit hooks and app dependencies. After that, every commit runs formatting, Terraform checks, and secret detection automatically.
 
 ### Frontend
 
@@ -54,12 +55,19 @@ npm install
 ng serve
 ```
 
+Sync env from Parameter Store after Terraform apply:
+
+```powershell
+.\scripts\sync-frontend-env.ps1 -Env dev
+```
+
 ### Backend
 
 ```bash
 cd apps/backend
 npm install
 npm run build
+.\scripts\deploy-functions.ps1 -Env dev
 ```
 
 ### Infrastructure
@@ -71,7 +79,7 @@ terraform plan
 terraform apply
 ```
 
-## DevSecOps & quality gates (Phase A)
+## DevSecOps & quality gates
 
 Security and quality issues are detected **before** merge — not after production.
 
@@ -81,50 +89,41 @@ Security and quality issues are detected **before** merge — not after producti
 | **Gitleaks** | Local + CI | Block secrets from entering git |
 | **terraform fmt / validate** | Local + CI | IaC correctness |
 | **TFLint** | Local + CI | Terraform best-practice lint |
-| **tfsec** | Local + CI | Terraform security scan |
-| **Checkov** | Local + CI | Policy-as-code security scan |
+| **tfsec** | Local + CI | Terraform security scan (**hard fail**) |
+| **Checkov** | Local + CI | Policy-as-code security scan (**hard fail**) |
 | **terraform-docs** | Local + CI | Keep module READMEs in sync |
 | **Dependabot** | Weekly PRs | Dependency / Action updates |
+| **SSM Parameter Store** | Runtime / CI | Non-secret config outside git |
 
-### Local commands
+### CI / CD promotion
 
-```bash
-# Run the full pre-commit suite
-pre-commit run --all-files
-
-# Terraform format + validate (no remote state)
-terraform fmt -recursive infrastructure
-terraform -chdir=infrastructure/environments/dev init -backend=false
-terraform -chdir=infrastructure/environments/dev validate
+```
+PR → CI (hard fail) → merge main → Deploy Development
+                                      ↓ (manual)
+                               Deploy Production
 ```
 
-### CI behavior
-
-On every PR to `main` / `develop`, GitHub Actions runs:
-
-1. Gitleaks (hard fail)
-2. Terraform fmt + validate + TFLint (hard fail)
-3. tfsec + Checkov (**soft-fail in Phase A** — findings are reported; Phase B remediates then hard-fails)
-4. terraform-docs drift check (hard fail if module READMEs are stale)
+See [docs/release-management.md](docs/release-management.md) for GitHub Environment secrets setup.
 
 ## Environments
 
 | Environment | Purpose |
 |---|---|
-| `dev` | Day-to-day integration (currently deployed) |
-| `prod` | Portfolio production (manual approval — Phase B release management) |
+| `dev` | Day-to-day integration |
+| `prod` | Portfolio production (manual approval) |
 
 ## Architecture docs
 
 - [Architecture overview](docs/architecture.md)
-- [ADRs](docs/adr/) — expanding with Lambda vs EC2, DynamoDB vs RDS, pre-signed URLs, EventBridge, etc.
+- [Release management](docs/release-management.md)
+- [ADRs](docs/adr/) — including Parameter Store and security hardening
 
 ## Roadmap (platform track)
 
-- **Phase A (this)** — Shift-left: pre-commit, Gitleaks, Checkov, tfsec, CI, Dependabot, terraform-docs
-- **Phase B** — Parameter Store, encryption/BPA/IAM hardening, hard-fail security scans, release promotion
-- **Phase C** — Structured logs, custom metrics, richer CloudWatch dashboards
-- **Phase D** — Runbooks, FinOps, DR plan, expanded ADRs
+- [x] **Phase A** — Shift-left: pre-commit, Gitleaks, Checkov, tfsec, CI, Dependabot, terraform-docs
+- [x] **Phase B** — Parameter Store, encryption/BPA/IAM hardening, hard-fail scans, release promotion
+- [ ] **Phase C** — Structured logs, custom metrics, richer CloudWatch dashboards
+- [ ] **Phase D** — Runbooks, FinOps, DR plan, expanded ADRs
 
 ## License
 

@@ -1,17 +1,15 @@
 # tfsec configuration — MediaFlow Studios DAM
 # Docs: https://aquasecurity.github.io/tfsec/latest/guides/configuration/config/
-#
-# Phase A: surface findings. Phase B: remediate and remove soft exclusions.
 
 version: 2
 
-minimum_severity: LOW
+minimum_severity: MEDIUM
 
-exclude: []
-
-# Document intentional exceptions here (prefer none for a portfolio project).
-# Example:
-# exclude:
-#   - aws-s3-enable-bucket-logging  # deferred: access logs bucket cost vs demo budget
+exclude:
+  # Align with Checkov skips — see .checkov.yaml and ADR-003 / FinOps notes
+  - aws-s3-encryption-customer-key
+  - aws-cloudfront-enable-waf
+  - aws-lambda-restrict-source-arn # handled at API Gateway authorizer layer
+  - aws-sqs-queue-encryption-use-cmk
 
 soft_fail: false

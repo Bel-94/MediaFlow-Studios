@@ -47,11 +47,8 @@ repos:
       - id: terraform_tfsec
         args:
           - --args=--config-file=__GIT_WORKING_DIR__/.tfsec.yml
-          # Soft-fail until Phase B remediates findings, then remove --soft-fail
-          - --args=--soft-fail
       - id: terraform_checkov
         args:
           - --args=--config-file __GIT_WORKING_DIR__/.checkov.yaml
-          - --args=--soft-fail
 
   # Prettier / ESLint hooks land with the Angular Material UI track.

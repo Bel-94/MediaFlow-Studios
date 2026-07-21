@@ -84,3 +84,19 @@ module "observability" {
   dlq_name       = module.events.dlq_name
   alert_email    = var.alert_email
 }
+
+# Non-secret config for CI / apps — never commit rotating secrets to git
+module "config" {
+  source       = "./modules/config"
+  project_name = var.project_name
+  environment  = var.environment
+  parameters = {
+    api_url              = module.api.api_url
+    cognito_user_pool_id = module.auth.user_pool_id
+    cognito_client_id    = module.auth.client_id
+    cognito_domain       = module.auth.cognito_domain
+    cloudfront_domain    = module.frontend.cloudfront_domain
+    bucket_name          = module.storage.bucket_name
+    table_name           = module.storage.table_name
+  }
+}

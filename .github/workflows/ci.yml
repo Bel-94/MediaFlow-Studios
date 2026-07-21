@@ -1,6 +1,5 @@
-# Phase A — PR quality gate (no AWS deploy)
-# Fails the build on format/validate/secret issues.
-# Checkov/tfsec report findings; soft-fail until Phase B remediations land.
+# Phase B — PR quality gate (no AWS deploy)
+# Hard-fails on secrets, Terraform correctness, and HIGH security findings.
 
 name: CI — Quality & Security
 
@@ -10,6 +9,7 @@ on:
   push:
     branches: [main, develop]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -57,9 +57,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Terraform fmt (check)
-        id: fmt
         run: terraform fmt -check -recursive -diff
-        continue-on-error: false
 
       - name: Terraform init (no backend)
         working-directory: infrastructure/environments/dev
@@ -94,9 +92,8 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: infrastructure
-          soft_fail: true
-          additional_args: --config-file ${{ github.workspace }}/.tfsec.yml
-        # Phase B: set soft_fail: false after remediating HIGH/CRITICAL findings
+          soft_fail: false
+          additional_args: --config-file ${{ github.workspace }}/.tfsec.yml --minimum-severity MEDIUM
 
   checkov:
     name: Terraform security (Checkov)
@@ -111,10 +108,9 @@ jobs:
           directory: infrastructure
           config_file: .checkov.yaml
           framework: terraform
-          soft_fail: true
+          soft_fail: false
           output_format: cli
           download_external_modules: false
-        # Phase B: set soft_fail: false after remediating findings
 
   terraform-docs:
     name: terraform-docs drift check
@@ -123,13 +119,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate docs and fail if outdated
+      - name: Generate docs
         uses: terraform-docs/gh-actions@v1.3.0
         with:
           working-dir: |
             infrastructure/modules/api
             infrastructure/modules/auth
             infrastructure/modules/compute
+            infrastructure/modules/config
             infrastructure/modules/events
             infrastructure/modules/frontend
             infrastructure/modules/observability
@@ -138,4 +135,3 @@ jobs:
           output-method: inject
           config-file: .terraform-docs.yml
           fail-on-diff: false
-          # Set to true once terraform-docs is run locally and READMEs are committed

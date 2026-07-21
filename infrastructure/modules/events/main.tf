@@ -2,17 +2,29 @@
 resource "aws_sqs_queue" "dlq" {
   name                      = "${var.project_name}-events-dlq-${var.environment}"
   message_retention_seconds = 1209600 # 14 days
+  sqs_managed_sse_enabled   = true
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
 }
 
 # ── SQS Main Queue ─────────────────────────────────────────────────────────────
 resource "aws_sqs_queue" "events" {
   name                       = "${var.project_name}-events-${var.environment}"
   visibility_timeout_seconds = 300 # must be >= Lambda timeout
+  sqs_managed_sse_enabled    = true
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.dlq.arn
     maxReceiveCount     = 3
   })
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
 }
 
 # ── Allow EventBridge to send messages to SQS ─────────────────────────────────
