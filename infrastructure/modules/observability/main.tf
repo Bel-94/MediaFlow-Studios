@@ -78,13 +78,156 @@ resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
   ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
-# ── CloudWatch Dashboard ───────────────────────────────────────────────────────
+# ── Alarm 5: Business — processing failures (EMF custom metric) ───────────────
+resource "aws_cloudwatch_metric_alarm" "processing_failures" {
+  alarm_name          = "${var.project_name}-processing-failures-${var.environment}"
+  alarm_description   = "S3 event processor reported ProcessingFailures — check DLQ and logs"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ProcessingFailures"
+  namespace           = "MediaFlow/DAM"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+  dimensions = {
+    Environment = var.environment
+    Service     = var.function_names["s3-event-processor"]
+  }
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+}
+
+# ── Alarm 6: API Gateway 5XX ──────────────────────────────────────────────────
+resource "aws_cloudwatch_metric_alarm" "api_5xx" {
+  alarm_name          = "${var.project_name}-api-5xx-${var.environment}"
+  alarm_description   = "API Gateway 5XX errors elevated"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 5
+  treat_missing_data  = "notBreaching"
+  dimensions = {
+    ApiName = var.api_name
+    Stage   = var.api_stage
+  }
+  alarm_actions = [aws_sns_topic.alerts.arn]
+}
+
+# ── Alarm 7: API Gateway latency p99 ──────────────────────────────────────────
+resource "aws_cloudwatch_metric_alarm" "api_latency" {
+  alarm_name          = "${var.project_name}-api-latency-${var.environment}"
+  alarm_description   = "API Gateway p99 latency > 3s"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "Latency"
+  namespace           = "AWS/ApiGateway"
+  period              = 60
+  extended_statistic  = "p99"
+  threshold           = 3000
+  treat_missing_data  = "notBreaching"
+  dimensions = {
+    ApiName = var.api_name
+    Stage   = var.api_stage
+  }
+  alarm_actions = [aws_sns_topic.alerts.arn]
+}
+
+locals {
+  files_api_name     = var.function_names["files-api"]
+  processor_name     = var.function_names["s3-event-processor"]
+  business_namespace = "MediaFlow/DAM"
+}
+
+# ── CloudWatch Dashboard — ops + business pipeline ────────────────────────────
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.project_name}-${var.environment}"
 
   dashboard_body = jsonencode({
     widgets = concat(
-      # Lambda Errors & Throttles row
+      # Row 0 — business pipeline KPIs
+      [
+        {
+          type   = "metric"
+          width  = 8
+          height = 6
+          properties = {
+            title  = "Upload URLs issued"
+            region = var.aws_region
+            view   = "timeSeries"
+            period = 60
+            metrics = [
+              [local.business_namespace, "UploadUrlIssued", "Environment", var.environment, "Service", local.files_api_name, { stat = "Sum", color = "#2ca02c" }],
+              [".", "UploadUrlRejected", ".", ".", ".", ".", { stat = "Sum", color = "#d62728" }],
+            ]
+          }
+        },
+        {
+          type   = "metric"
+          width  = 8
+          height = 6
+          properties = {
+            title  = "Uploads processed (S3 → DynamoDB)"
+            region = var.aws_region
+            view   = "timeSeries"
+            period = 60
+            metrics = [
+              [local.business_namespace, "UploadProcessed", "Environment", var.environment, "Service", local.processor_name, { stat = "Sum", color = "#2ca02c" }],
+              [".", "ProcessingFailures", ".", ".", ".", ".", { stat = "Sum", color = "#d62728" }],
+              [".", "ProcessingIdempotentSkip", ".", ".", ".", ".", { stat = "Sum", color = "#ff7f0e" }],
+            ]
+          }
+        },
+        {
+          type   = "metric"
+          width  = 8
+          height = 6
+          properties = {
+            title  = "File processing latency (ms)"
+            region = var.aws_region
+            view   = "timeSeries"
+            period = 60
+            metrics = [
+              [local.business_namespace, "ProcessingLatencyMs", "Environment", var.environment, "Service", local.processor_name, { stat = "p50" }],
+              ["...", { stat = "p99", color = "#d62728" }],
+            ]
+          }
+        },
+        {
+          type   = "metric"
+          width  = 12
+          height = 6
+          properties = {
+            title  = "API Gateway — latency & 5XX"
+            region = var.aws_region
+            view   = "timeSeries"
+            period = 60
+            metrics = [
+              ["AWS/ApiGateway", "Latency", "ApiName", var.api_name, "Stage", var.api_stage, { stat = "p50" }],
+              ["...", { stat = "p99", color = "#d62728" }],
+              [".", "5XXError", ".", ".", ".", ".", { stat = "Sum", yAxis = "right", color = "#ff7f0e" }],
+            ]
+          }
+        },
+        {
+          type   = "metric"
+          width  = 12
+          height = 6
+          properties = {
+            title  = "API latency by operation (EMF)"
+            region = var.aws_region
+            view   = "timeSeries"
+            period = 60
+            metrics = [
+              [local.business_namespace, "ApiLatencyMs", "Environment", var.environment, "Service", local.files_api_name, { stat = "p99" }],
+            ]
+          }
+        },
+      ],
+      # Lambda Errors & Throttles
       [for name in values(var.function_names) : {
         type   = "metric"
         width  = 6
@@ -100,7 +243,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           view   = "timeSeries"
         }
       }],
-      # Lambda Duration row
+      # Lambda Duration
       [for name in values(var.function_names) : {
         type   = "metric"
         width  = 6
@@ -116,7 +259,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           view   = "timeSeries"
         }
       }],
-      # DLQ depth widget
+      # DLQ
       [{
         type   = "metric"
         width  = 12
@@ -129,6 +272,20 @@ resource "aws_cloudwatch_dashboard" "main" {
           ]
           period = 60
           view   = "timeSeries"
+        }
+      }],
+      # Logs Insights deep-link style text
+      [{
+        type   = "text"
+        width  = 24
+        height = 3
+        properties = {
+          markdown = <<-EOT
+            ## MediaFlow ops tips
+            - **Logs Insights**: filter `fields @timestamp, level, message, correlationId | filter level = "ERROR"`
+            - **Upload pipeline**: `UploadUrlIssued` → browser PUT to S3 → `UploadProcessed`
+            - **Namespace**: `MediaFlow/DAM` (Embedded Metric Format from Lambda logs)
+          EOT
         }
       }]
     )

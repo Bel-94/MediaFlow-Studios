@@ -116,13 +116,14 @@ See [docs/release-management.md](docs/release-management.md) for GitHub Environm
 
 - [Architecture overview](docs/architecture.md)
 - [Release management](docs/release-management.md)
-- [ADRs](docs/adr/) — including Parameter Store and security hardening
+- [Observability](docs/observability.md)
+- [ADRs](docs/adr/) — including Parameter Store, security hardening, and EMF metrics
 
 ## Roadmap (platform track)
 
 - [x] **Phase A** — Shift-left: pre-commit, Gitleaks, Checkov, tfsec, CI, Dependabot, terraform-docs
 - [x] **Phase B** — Parameter Store, encryption/BPA/IAM hardening, hard-fail scans, release promotion
-- [ ] **Phase C** — Structured logs, custom metrics, richer CloudWatch dashboards
+- [x] **Phase C** — Structured logs, EMF custom metrics, richer CloudWatch dashboards & alarms
 - [ ] **Phase D** — Runbooks, FinOps, DR plan, expanded ADRs
 
 ## License

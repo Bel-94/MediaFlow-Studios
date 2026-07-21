@@ -290,6 +290,18 @@ resource "aws_api_gateway_stage" "main" {
   xray_tracing_enabled = true
 }
 
+# Detailed CloudWatch metrics for latency / 4XX / 5XX (ops dashboard)
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.main.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled = true
+    # Access logging requires an account-level API Gateway → CloudWatch role; metrics alone do not.
+  }
+}
+
 # ── Lambda permissions ─────────────────────────────────────────────────────────
 locals {
   lambda_permissions = {

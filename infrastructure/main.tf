@@ -83,6 +83,8 @@ module "observability" {
   dlq_arn        = module.events.dlq_arn
   dlq_name       = module.events.dlq_name
   alert_email    = var.alert_email
+  api_name       = "${var.project_name}-${var.environment}"
+  api_stage      = var.environment
 }
 
 # Non-secret config for CI / apps — never commit rotating secrets to git
