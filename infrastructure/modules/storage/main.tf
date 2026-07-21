@@ -205,7 +205,8 @@ resource "aws_dynamodb_table" "files" {
   }
 
   point_in_time_recovery {
-    enabled = var.environment == "prod"
+    # Enabled in all envs — negligible cost for a small metadata table; required by tfsec.
+    enabled = true
   }
 
   tags = {

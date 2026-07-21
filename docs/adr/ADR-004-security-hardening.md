@@ -24,7 +24,7 @@ Phase A Checkov/tfsec scans flagged missing encryption, public access controls, 
 | Decision | Benefit | Tradeoff | Why accepted |
 |---|---|---|---|
 | SSE-S3 vs CMK | $0 KMS requests | No customer key rotation | Cost target $0–5/mo |
-| PITR prod-only | Lower dev cost | Weaker dev recovery | Dev is disposable |
+| PITR prod-only | Lower dev cost | Weaker dev recovery | **Superseded:** PITR now on in all envs (negligible demo cost; satisfies tfsec) |
 | No CloudFront WAF | Low cost | No managed edge rules | HTTPS + Cognito + OAC sufficient for portfolio |
 | No Lambda VPC | Simple, cheap | No private subnet isolation | No private deps yet |
 
