@@ -71,7 +71,11 @@ jobs:
         with:
           tflint_version: v0.55.0
 
+      # Authenticated GitHub API avoids unauthenticated rate limits when
+      # downloading tflint-ruleset-aws from GitHub Releases.
       - name: TFLint init
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: tflint --init --config "${{ github.workspace }}/.tflint.hcl"
         working-directory: ${{ github.workspace }}
 
