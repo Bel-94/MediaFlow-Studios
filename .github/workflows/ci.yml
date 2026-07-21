@@ -1,5 +1,5 @@
-# Phase B — PR quality gate (no AWS deploy)
-# Hard-fails on secrets, Terraform correctness, and HIGH security findings.
+# PR / push quality gate (no AWS deploy)
+# Hard-fails on secrets, Terraform correctness, and security findings.
 
 name: CI — Quality & Security
 
@@ -8,8 +8,7 @@ on:
     branches: [main, develop]
   push:
     branches: [main, develop]
-  # Remove workflow_call — deploy workflows use workflow_run instead of reusable CI
-# to avoid GitHub Actions permission conflicts when calling ci.yml.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -88,12 +87,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Pin a release and download the binary directly — avoids GitHub API rate limits
+      # that break aquasecurity/tfsec-action when resolving "latest".
+      - name: Install tfsec
+        env:
+          TFSEC_VERSION: v1.28.14
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/tfsec \
+            "https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-amd64"
+          chmod +x /tmp/tfsec
+          sudo mv /tmp/tfsec /usr/local/bin/tfsec
+          tfsec --version
+
       - name: Run tfsec
-        uses: aquasecurity/tfsec-action@v1.0.3
-        with:
-          working_directory: infrastructure
-          soft_fail: false
-          additional_args: --config-file ${{ github.workspace }}/.tfsec.yml --minimum-severity MEDIUM
+        run: |
+          tfsec infrastructure \
+            --config-file .tfsec.yml \
+            --minimum-severity MEDIUM \
+            --no-color
 
   checkov:
     name: Terraform security (Checkov)
