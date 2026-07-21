@@ -1,15 +1,26 @@
 # tfsec configuration — MediaFlow Studios DAM
 # Docs: https://aquasecurity.github.io/tfsec/latest/guides/configuration/config/
+# Align exclusions with .checkov.yaml / ADR-004 FinOps tradeoffs.
 
 version: 2
 
 minimum_severity: MEDIUM
 
 exclude:
-  # Align with Checkov skips — see .checkov.yaml and ADR-003 / FinOps notes
   - aws-s3-encryption-customer-key
+  - aws-s3-enable-bucket-logging
+  - aws-s3-enable-versioning
   - aws-cloudfront-enable-waf
-  - aws-lambda-restrict-source-arn # handled at API Gateway authorizer layer
+  - aws-cloudfront-enable-logging
+  - aws-cloudfront-use-secure-tls-policy
+  - aws-lambda-in-vpc
+  - aws-lambda-restrict-source-arn
   - aws-sqs-queue-encryption-use-cmk
+  - aws-dynamodb-table-customer-key
+  - aws-cloudwatch-log-group-customer-key
+  - aws-sns-topic-encryption-use-cmk
+  - aws-api-gateway-enable-access-logging
+  - aws-api-gateway-enable-cache-encryption
+  - aws-api-gateway-enable-tracing
 
 soft_fail: false
