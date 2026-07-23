@@ -13,10 +13,9 @@ Local alternative: `.\scripts\sync-frontend-env.ps1 -Env dev` then `cd apps/fron
 
 ## Demo user
 
-Create once in Cognito user pool `s3files-dev` (or via Hosted UI):
+Sign up from the Hosted UI with a **real email** (email is the username). Password must be 12+ chars with upper, lower, number, and symbol.
 
-- Email: `demo@mediaflow.local` (or your email)
-- Temporary password, then set a permanent password on first login
+Cognito will email a verification code — enter it to confirm, then you’ll land back in the app.
 
 ## Script (about 5 minutes)
 
